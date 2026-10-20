@@ -3,7 +3,8 @@ main = "worker/worker.ts"
 compatibility_date = "2025-05-08"
 compatibility_flags = ["nodejs_compat"]
 upload_source_maps = true
-preview_urls = true
+# Off: preview URLs would bypass the Cloudflare Access login on the main URL.
+preview_urls = false
 
 # Custom domain — set to your own, or leave commented to use the workers.dev URL.
 # [[routes]]
@@ -32,4 +33,5 @@ new_sqlite_classes = ["BoardServer"]
 [[r2_buckets]]
 binding = "BOARD_FILES"
 bucket_name = "shoptet-canvas-uploads"
+jurisdiction = "eu"
 preview_bucket_name = "shoptet-canvas-uploads-preview"

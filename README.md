@@ -20,18 +20,14 @@ Open http://localhost:5173, click **New board**, then open the same URL in a sec
 
 ## Deploy (Cloudflare)
 
-1. `npx wrangler login`
-2. Create the image bucket: `npx wrangler r2 bucket create shoptet-canvas-uploads`
-3. `npm run deploy`
-4. Optional: custom domain in `wrangler.toml` (`[[routes]]` block)
-5. Put **Cloudflare Access** (Zero Trust → Access → Applications) in front with company SSO
-
-Free Cloudflare plan is enough to start.
+Step-by-step guide: [`docs/DEPLOY.md`](docs/DEPLOY.md). Short version: `npx wrangler login`,
+create the EU R2 bucket, `npm run deploy`, then enable Cloudflare Access on the URL.
 
 ## Docs
 
 - `CLAUDE.md` — working instructions for Claude / AI coding tools
 - `docs/CONTEXT.md` — decisions, data storage, status
+- `docs/DEPLOY.md` — deploying to Cloudflare, step by step
 
 `LICENSE.md` is the MIT licence of the tldraw sync template this repo started from (a little of its
 worker scaffolding remains). The earlier tldraw-based prototype is kept at git tag `tldraw-prototype`.
