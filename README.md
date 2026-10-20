@@ -31,3 +31,4 @@ create the EU R2 bucket, `npm run deploy`, then enable Cloudflare Access on the 
 
 `LICENSE.md` is the MIT licence of the tldraw sync template this repo started from (a little of its
 worker scaffolding remains). The earlier tldraw-based prototype is kept at git tag `tldraw-prototype`.
+# shop-canvas
