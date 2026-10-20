@@ -11,7 +11,7 @@ URLs are off (they would bypass the login from step 5).
 ## Step 1 — Commit your work
 
 ```bash
-git status            # nothing should be left uncommitted
+git status
 git add -A && git commit -m "…"
 ```
 
@@ -23,16 +23,17 @@ git add -A && git commit -m "…"
 2. In the project folder:
 
 ```bash
-npx wrangler login     # opens the browser, click "Allow"
-npx wrangler whoami    # shows your account name + ID
+npx wrangler login
+npx wrangler whoami
 ```
 
-✅ `whoami` prints your email and account.
+`login` opens the browser; click "Allow". ✅ `whoami` prints your email and account.
 
 ## Step 3 — Create the image bucket (EU)
 
-1. Dashboard → **R2 Object Storage** → enable R2 if asked. Cloudflare may want a card on file;
-   usage stays inside the free tier (10 GB).
+1. Dashboard → **R2 Object Storage** → **Enable R2** (one-time; may be labelled "Purchase R2" /
+   "Get started"). Cloudflare asks for a card; usage stays inside the free tier (10 GB).
+   Without this, the next command fails with `Please enable R2 through the Cloudflare Dashboard. [code: 10042]`.
 2. Then:
 
 ```bash
@@ -40,6 +41,9 @@ npx wrangler r2 bucket create shoptet-canvas-uploads --jurisdiction eu
 ```
 
 ✅ `npx wrangler r2 bucket list --jurisdiction eu` shows `shoptet-canvas-uploads`.
+
+The bucket must be created with `--jurisdiction eu`. A regular bucket with the same name doesn't
+count; the deploy then fails with `R2 bucket 'shoptet-canvas-uploads' not found [code: 10085]`.
 
 ## Step 4 — First deploy
 
@@ -77,6 +81,13 @@ adjustable in the Access application settings).
 ✅ A colleague can open a board you send them and you see each other's cursors.
 
 ---
+
+## Deploying via Git (Workers Builds)
+
+If the Worker is connected to the Git repo in the dashboard, every push to `main` builds and deploys
+automatically (build command `npm run build`, deploy command `npx wrangler deploy`), so you don't need
+`npm run deploy` from your laptop. The Worker's name in the dashboard must match `name` in
+`wrangler.toml`; if it doesn't, Cloudflare warns and opens a pull request to rename it in the code.
 
 ## Day-to-day
 
