@@ -25,6 +25,5 @@ Open http://localhost:5173, click **New board**, then open the same URL in a sec
 
 - `CLAUDE.md` — working instructions for Claude / AI coding tools
 - `docs/CONTEXT.md` — why it's built this way, scope, status
-- `docs/TEMPLATE_README.md` — original tldraw sync template README (architecture details)
 
 Template code is MIT (`LICENSE.md`); the tldraw SDK is under the [tldraw license](https://github.com/tldraw/tldraw/blob/main/LICENSE.md).
