@@ -3,4 +3,4 @@ node_modules
 .yarn/
 .wrangler/
 dist/.env
-.env.local
+public/fonts/

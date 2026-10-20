@@ -4,50 +4,68 @@
 
 A multiplayer board with mostly stickies, rectangles and text, plus image import.
 Not needed: export, sharing permissions, comments, templates. "Just canvas, a couple of shapes and stickies."
+Hard requirement: **our own thing, no paywall / licence keys.**
 
 ## Why not just Miro
 
-Miro is already paid for. The reasoning for building anyway is a narrow, simple board — and a
-throwaway-friendly playground for canvas-style editing ideas (selection models, contextual toolbars).
-Rebuilding "Miro but simpler" in general would mean rebuilding Miro's boring parts and still losing.
+Miro is already paid for. The reasoning for building anyway is a narrow, simple board we fully own —
+and a playground for canvas-style editing ideas (selection models, contextual toolbars).
+
+## Decision log
+
+1. **Started on tldraw + tldraw sync** (fastest route). Dropped: tldraw SDK needs a commercial licence
+   for any production domain (the editor refuses to render unlicensed on https). Hobby licence doesn't
+   fit company use; commercial pricing is quote-only. The prototype is kept in git as tag `tldraw-prototype`.
+2. **Now: Excalidraw + Yjs, our own sync server** (option 1). All MIT/ISC. Excalidraw gives a polished
+   canvas; we own the sync, storage and data format.
+3. **Later, maybe: our own canvas (Konva + Yjs)** (option 2). The Yjs document shape and the server
+   are renderer-agnostic, so swapping the renderer doesn't lose boards. Do this if Excalidraw's look or
+   interaction model gets in the way.
 
 ## Options considered
 
 | Route | Effort | Notes |
 |---|---|---|
-| **tldraw + tldraw sync (chosen)** | ½ day prototype, 2–3 days polished | Canvas, stickies, rects, text, selection, undo, cursors, sync, persistence, image upload all included. Work is mostly *removal*. **Licence needed for production.** |
-| Excalidraw | few more days | MIT. Collab server is separate with simpler conflict handling; stickies less native. |
-| Konva + Yjs from scratch | 1–2 weeks to feel decent | Only if we want full control of the interaction model. |
+| tldraw + sync | ½ day | Best out of the box, but **licence required for production**. Rejected. |
+| **Excalidraw + Yjs (chosen)** | 2–4 days | MIT. No native stickies (we make them: yellow rectangle + bound text). Hand-drawn look toned down via defaults. |
+| Konva + Yjs from scratch | 1–2 weeks to feel decent | Full control. Possible next step. |
 
-## Known effort sinks
+## Costs (all free at our size)
 
-- **Images** are the only real backend work → R2 upload, sync only the URL. Template handles it.
-- **"No permissions" still needs a door** → Cloudflare Access with company SSO in front of the worker.
-  Config, not code. Without it, anyone with a board URL can edit.
-- **Persistence & recovery** → DO SQLite persists rooms; per-session undo covers most mistakes.
-  A periodic per-room snapshot (e.g. to R2) is cheap insurance against select-all-delete. *Not built yet.*
-- Canvas interaction details (zoom around cursor, hit-testing, snapping, text auto-size) are where
-  from-scratch builds lose time. tldraw already solves these — don't fight it.
-
-## Status
-
-- [x] Scaffold from tldraw `multiplayer` starter (tldraw 5.5.x)
-- [x] Toolbar reduced to select, hand, sticky, rectangle, text, image, eraser; other shortcuts disabled
-- [x] Home page with New board + recent boards; boards at `/b/:id`
-- [x] Board rename (header; stored in tldraw document record, synced + persisted)
-- [x] Verified locally: two clients see each other's shapes and presence
-- [ ] Get tldraw licence key (or confirm terms for internal use)
-- [ ] Create Cloudflare account resources (R2 bucket `shoptet-canvas-uploads`), deploy
-- [ ] Put Cloudflare Access (SSO) in front
-- [ ] Nightly room snapshots
-- [ ] Styling / branding pass
+- Code: Excalidraw MIT, Yjs MIT, y-partyserver/partyserver ISC. "Excalidraw+" (their hosted SaaS) is not used.
+- Cloudflare Workers Free plan includes SQLite Durable Objects (5 GB, 100k requests/day). Paid plan from $5/month if outgrown.
+- R2: free up to 10 GB storage.
 
 ## How data is stored
 
-- **Board content** (shapes, text, board name, pages): one Cloudflare Durable Object per board ID,
-  persisted to that object's built-in SQLite storage. Survives restarts/hibernation. No separate DB.
-- **Images**: Cloudflare R2 bucket `shoptet-canvas-uploads` under `uploads/<id>`; the board only stores the URL.
-- **Recent boards on the home page**: the browser's localStorage only (per person, per browser).
-  There is no server-side list of boards — losing a board ID means losing the way to that board.
-- **Locally** (`npm run dev`): all of the above is emulated on disk in `.wrangler/state/`. Delete it to reset.
-- No backups yet; see the snapshots to-do above.
+- **Board content** (elements, board name): one Yjs document per board, held by that board's Durable
+  Object and saved to its built-in SQLite (debounced ~2s, max 10s, and when the room empties).
+  Stored as a chunked Yjs update in table `doc_chunks`.
+- **Images**: R2 bucket `shoptet-canvas-uploads` at `files/<boardId>/<fileId>` (fileId = content hash).
+  The doc's `files` map just records that the file exists + its mime type.
+- **Recent boards on the home page** and **your display name**: browser localStorage only.
+  There is no server-side list of boards — the URL is the only way back to a board.
+- **Locally** (`npm run dev`): all of it is emulated in `.wrangler/state/`. Delete to reset.
+- No backups yet.
+
+## Known effort sinks / risks
+
+- "No permissions" still needs a door → Cloudflare Access (SSO) in front. Board IDs are random and
+  unguessable, but anyone with a link can edit.
+- Select-all + delete: undo is per person. Nightly snapshots to R2 would be cheap insurance.
+- Deleted-element tombstones accumulate in the doc; add pruning if boards get heavy.
+
+## Status
+
+- [x] Excalidraw + Yjs + Durable Object sync, SQLite persistence
+- [x] Tools limited to select, hand, rectangle, text, image, eraser + **Sticky** button / `N`
+- [x] Live cursors with names, selection highlights, laser pointer
+- [x] Image upload to R2, synced to others, reload-safe
+- [x] Board rename (synced), recent boards list, connection status dot
+- [x] Fonts self-hosted, zero third-party requests at runtime
+- [x] Verified: two browsers sync shapes/stickies/text/images/name; board survives everyone leaving; prod build works
+- [ ] Deploy to Cloudflare + Cloudflare Access (SSO)
+- [ ] Server-side board directory (list all boards)
+- [ ] Nightly snapshots
+- [ ] Sticky colours, styling/branding pass
+- [ ] Disable shortcuts of hidden tools

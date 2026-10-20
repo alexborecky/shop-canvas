@@ -4,20 +4,25 @@
 	"version": "0.0.0",
 	"type": "module",
 	"scripts": {
+		"predev": "node scripts/copy-excalidraw-assets.mjs",
 		"dev": "vite --host",
+		"prebuild": "node scripts/copy-excalidraw-assets.mjs",
 		"build": "tsc && vite build",
-		"preview": "vite preview"
+		"preview": "vite preview",
+		"typecheck": "tsc --noEmit",
+		"deploy": "npm run build && wrangler deploy",
+		"cf-typegen": "wrangler types"
 	},
 	"dependencies": {
-		"@tldraw/sync": "^5.5.2",
-		"@tldraw/sync-core": "^5.5.2",
-		"@tldraw/tlschema": "^5.5.2",
-		"cloudflare-workers-unfurl": "^0.0.9",
+		"@excalidraw/excalidraw": "^0.18.1",
 		"itty-router": "^5.0.18",
+		"partyserver": "^0.5.10",
 		"react": "^19.2.1",
 		"react-dom": "^19.2.1",
 		"react-router-dom": "^6.28.2",
-		"tldraw": "^5.5.2"
+		"y-partyserver": "^2.2.0",
+		"y-protocols": "^1.0.7",
+		"yjs": "^13.6.33"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.29.1",

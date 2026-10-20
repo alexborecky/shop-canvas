@@ -1,68 +1,19 @@
-import { useSync } from '@tldraw/sync'
-import { ReactNode, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Editor, Tldraw } from 'tldraw'
+import { Board } from '../Board'
 import { BoardName } from '../BoardName'
-import { boardComponents, boardOverrides } from '../boardConfig'
+import { getIdentity, Identity, setIdentityName } from '../identity'
 import { rememberBoard } from '../recentBoards'
-import { getBookmarkPreview } from '../getBookmarkPreview'
-import { multiplayerAssetStore } from '../multiplayerAssetStore'
+import { ConnectionStatus, useBoardDoc } from '../sync/useBoardDoc'
 
 export function Room() {
-	const { roomId } = useParams<{ roomId: string }>()
-
-	const [editor, setEditor] = useState<Editor | null>(null)
+	const { roomId = '' } = useParams<{ roomId: string }>()
+	const { board, status } = useBoardDoc(roomId)
+	const [identity, setIdentity] = useState<Identity>(getIdentity)
 
 	useEffect(() => {
 		if (roomId) rememberBoard(roomId)
 	}, [roomId])
-
-	// Create a store connected to multiplayer.
-	const store = useSync({
-		// We need to know the websockets URI...
-		uri: `${window.location.origin}/api/connect/${roomId}`,
-		// ...and how to handle static assets like images & videos
-		assets: multiplayerAssetStore,
-	})
-
-	return (
-		<RoomWrapper roomId={roomId} editor={editor}>
-			<Tldraw
-				// we can pass the connected store into the Tldraw component which will handle
-				// loading states & enable multiplayer UX like cursors & a presence menu
-				store={store}
-				options={{ deepLinks: true }}
-				// Required for production domains (localhost works without it). See CLAUDE.md.
-				licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY}
-				components={boardComponents}
-				overrides={boardOverrides}
-				onMount={(editor) => {
-					// when the editor is ready, we need to register our bookmark unfurling service
-					editor.registerExternalAssetHandler('url', getBookmarkPreview)
-					setEditor(editor)
-					return () => setEditor(null)
-				}}
-			/>
-		</RoomWrapper>
-	)
-}
-
-function RoomWrapper({
-	children,
-	roomId,
-	editor,
-}: {
-	children: ReactNode
-	roomId?: string
-	editor: Editor | null
-}) {
-	const [didCopy, setDidCopy] = useState(false)
-
-	useEffect(() => {
-		if (!didCopy) return
-		const timeout = setTimeout(() => setDidCopy(false), 3000)
-		return () => clearTimeout(timeout)
-	}, [didCopy])
 
 	return (
 		<div className="RoomWrapper">
@@ -70,40 +21,52 @@ function RoomWrapper({
 				<Link to="/" className="RoomWrapper-home">
 					Shoptet Canvas
 				</Link>
-				<WifiIcon />
-				{editor && roomId ? <BoardName editor={editor} roomId={roomId} /> : <div>{roomId}</div>}
-				<button
-					className="RoomWrapper-copy"
-					onClick={() => {
-						navigator.clipboard.writeText(window.location.href)
-						setDidCopy(true)
-					}}
-					aria-label="copy room link"
-				>
-					Copy link
-					{didCopy && <div className="RoomWrapper-copied">Copied!</div>}
-				</button>
+				<StatusDot status={status} />
+				{board ? <BoardName doc={board.doc} roomId={roomId} /> : <span>{roomId}</span>}
+				<div className="RoomWrapper-spacer" />
+				<input
+					className="HeaderInput YourName"
+					placeholder="Your name"
+					aria-label="Your name (shown on your cursor)"
+					value={identity.name}
+					maxLength={40}
+					onChange={(e) => setIdentity(setIdentityName(e.target.value))}
+					onKeyDown={(e) => e.stopPropagation()}
+				/>
+				<CopyLinkButton />
 			</div>
-			<div className="RoomWrapper-content">{children}</div>
+			<div className="RoomWrapper-content">
+				{board ? (
+					<Board board={board} boardId={roomId} identity={identity} />
+				) : (
+					<div className="Loading">Connecting…</div>
+				)}
+			</div>
 		</div>
 	)
 }
 
-function WifiIcon() {
+function StatusDot({ status }: { status: ConnectionStatus }) {
+	const label = { connecting: 'Connecting…', connected: 'Live', disconnected: 'Offline — reconnecting' }[status]
+	return <span className={`StatusDot StatusDot--${status}`} title={label} aria-label={label} />
+}
+
+function CopyLinkButton() {
+	const [didCopy, setDidCopy] = useState(false)
+	useEffect(() => {
+		if (!didCopy) return
+		const t = setTimeout(() => setDidCopy(false), 2000)
+		return () => clearTimeout(t)
+	}, [didCopy])
 	return (
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			fill="none"
-			viewBox="0 0 24 24"
-			strokeWidth="1.5"
-			stroke="currentColor"
-			width={16}
+		<button
+			className="RoomWrapper-copy"
+			onClick={() => {
+				navigator.clipboard.writeText(window.location.origin + window.location.pathname)
+				setDidCopy(true)
+			}}
 		>
-			<path
-				strokeLinecap="round"
-				strokeLinejoin="round"
-				d="M8.288 15.038a5.25 5.25 0 0 1 7.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 0 1 1.06 0Z"
-			/>
-		</svg>
+			{didCopy ? 'Copied!' : 'Copy link'}
+		</button>
 	)
 }

@@ -1,26 +1,36 @@
-import { useEffect, useRef, useState } from 'react'
-import { Editor, useValue } from 'tldraw'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import type * as Y from 'yjs'
+import { META_KEY } from '../shared/boardSchema'
 import { rememberBoard } from './recentBoards'
 
 export const UNTITLED = 'Untitled board'
 
+/** Reactive read of the board name from the shared document (doc.getMap('meta').get('name')). */
+function useBoardName(doc: Y.Doc) {
+	const meta = doc.getMap<string>(META_KEY)
+	return useSyncExternalStore(
+		(cb) => {
+			meta.observe(cb)
+			return () => meta.unobserve(cb)
+		},
+		() => meta.get('name') ?? ''
+	)
+}
+
 /**
- * Editable board name in the header.
- * Stored in the tldraw document record (editor.getDocumentSettings().name), so it is
- * persisted by the Durable Object and synced live to everyone on the board.
+ * Editable board name in the header. Stored in the board's Yjs document, so it is persisted
+ * with the board and synced live to everyone on it.
  */
-export function BoardName({ editor, roomId }: { editor: Editor; roomId: string }) {
-	const name = useValue('board name', () => editor.getDocumentSettings().name, [editor])
+export function BoardName({ doc, roomId }: { doc: Y.Doc; roomId: string }) {
+	const name = useBoardName(doc)
 	const [draft, setDraft] = useState(name)
 	const [editing, setEditing] = useState(false)
 	const cancelled = useRef(false)
 
-	// keep the local draft in sync with remote renames while not editing
 	useEffect(() => {
 		if (!editing) setDraft(name)
 	}, [name, editing])
 
-	// cache the name for the home page's recent list
 	useEffect(() => {
 		if (name) rememberBoard(roomId, name)
 	}, [roomId, name])
@@ -37,12 +47,12 @@ export function BoardName({ editor, roomId }: { editor: Editor; roomId: string }
 			return
 		}
 		const next = draft.trim()
-		if (next !== name) editor.updateDocumentSettings({ name: next })
+		if (next !== name) doc.getMap<string>(META_KEY).set('name', next)
 	}
 
 	return (
 		<input
-			className="BoardName"
+			className="HeaderInput BoardName"
 			value={editing ? draft : name}
 			placeholder={UNTITLED}
 			aria-label="Board name"
@@ -51,7 +61,6 @@ export function BoardName({ editor, roomId }: { editor: Editor; roomId: string }
 			onChange={(e) => setDraft(e.target.value)}
 			onBlur={commit}
 			onKeyDown={(e) => {
-				// stop tldraw shortcuts firing while typing
 				e.stopPropagation()
 				if (e.key === 'Enter') e.currentTarget.blur()
 				if (e.key === 'Escape') {

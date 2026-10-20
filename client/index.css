@@ -1,85 +1,60 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;700&display=swap');
-@import url('tldraw/tldraw.css');
+/* System fonts only: no external font CDN. Excalidraw's own fonts are self-hosted (public/fonts). */
+html,
+body,
+#root {
+	margin: 0;
+	height: 100%;
+}
 
 body {
-	font-family: 'Inter', sans-serif;
+	font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 	overscroll-behavior: none;
-}
-
-.RoomWrapper {
-	--background: white;
+	--background: #fff;
 	--text: hsl(0, 0%, 20%);
-	--gray-light: #f5f5f5;
-	--gray-dark: #e5e5e5;
-	--black-transparent-lighter: rgba(0, 0, 0, 0.15);
-	--black-transparent-light: rgba(0, 0, 0, 0.4);
-	--black-transparent-dark: rgba(0, 0, 0, 0.6);
-	--black-transparent-darker: rgba(0, 0, 0, 0.7);
+	--muted: #888;
+	--border: #e5e5e5;
 	--focus: hsl(217, 89%, 61%);
-	--whiteboard: hsl(240, 5%, 96%);
-	color-scheme: light;
+	background: var(--background);
+	color: var(--text);
 }
 
-:root:has(.tl-theme__dark) .RoomWrapper {
-	--background: black;
-	--text: hsl(0, 9%, 94%);
-	--gray-light: #333;
-	--gray-dark: #444;
-	--black-transparent-lighter: rgba(255, 255, 255, 0.15);
-	--black-transparent-light: rgba(255, 255, 255, 0.4);
-	--black-transparent-dark: rgba(255, 255, 255, 0.6);
-	--black-transparent-darker: rgba(255, 255, 255, 0.7);
-	--focus: hsl(217, 89%, 61%);
-	--whiteboard: hsl(240, 5%, 6.5%);
-	color-scheme: dark;
-}
+/* ---- Board page ---- */
 
 .RoomWrapper {
 	display: flex;
 	flex-direction: column;
 	position: absolute;
-	inset: 0px;
+	inset: 0;
 }
 
 .RoomWrapper-header {
 	display: flex;
-	flex-direction: row;
-	justify-content: flex-start;
 	align-items: center;
+	gap: 12px;
 	padding: 8px 16px;
-	gap: 16px;
-	background: var(--background);
-	border-bottom: 1px solid var(--gray-dark);
-	color: var(--text);
+	border-bottom: 1px solid var(--border);
 	font-size: 14px;
 }
 
+.RoomWrapper-home {
+	font-weight: 700;
+	color: inherit;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.RoomWrapper-spacer {
+	flex: 1;
+}
+
 .RoomWrapper-copy {
-	background: var(--black-transparent-lighter);
-	border: 1px solid var(--gray-dark);
-	border-radius: 4px;
+	font: inherit;
+	background: #f1f3f5;
+	border: 1px solid var(--border);
+	border-radius: 6px;
 	padding: 4px 12px;
-	height: 24px;
 	cursor: pointer;
-	position: relative;
-	text-align: center;
-}
-
-.RoomWrapper-copy:has(.RoomWrapper-copied) {
-	color: transparent;
-}
-
-.RoomWrapper-copied {
-	color: var(--text);
-	position: absolute;
-	inset: 0;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.RoomWrapper-copy:hover {
-	border: 1px solid var(--black-transparent-lighter);
+	white-space: nowrap;
 }
 
 .RoomWrapper-content {
@@ -87,19 +62,87 @@ body {
 	flex: 1;
 }
 
-/* ---- Shoptet Canvas ---- */
-
-.RoomWrapper-home {
-	font-weight: 700;
-	color: inherit;
-	text-decoration: none;
+.Board {
+	position: absolute;
+	inset: 0;
 }
+
+.Loading {
+	display: grid;
+	place-items: center;
+	height: 100%;
+	color: var(--muted);
+}
+
+.HeaderInput {
+	font: inherit;
+	color: inherit;
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 6px;
+	padding: 3px 8px;
+	min-width: 0;
+}
+
+.HeaderInput:hover {
+	border-color: var(--border);
+}
+
+.HeaderInput:focus {
+	outline: none;
+	border-color: var(--focus);
+}
+
+.BoardName {
+	width: 260px;
+	font-weight: 600;
+}
+
+.YourName {
+	width: 140px;
+	border-color: var(--border);
+}
+
+.StatusDot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	flex: none;
+	background: #adb5bd;
+}
+
+.StatusDot--connected {
+	background: #2f9e44;
+}
+
+.StatusDot--disconnected {
+	background: #e03131;
+}
+
+.StickyButton {
+	font: inherit;
+	font-size: 14px;
+	font-weight: 600;
+	height: 36px;
+	padding: 0 12px;
+	border-radius: 8px;
+	border: 1px solid #f2c94c;
+	background: #ffec99;
+	color: #5c4b00;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.StickyButton:hover {
+	background: #ffe066;
+}
+
+/* ---- Home page ---- */
 
 .Home {
 	max-width: 560px;
 	margin: 80px auto;
 	padding: 0 16px;
-	color: hsl(0, 0%, 20%);
 }
 
 .Home h1 {
@@ -113,7 +156,7 @@ body {
 	font-weight: 700;
 	border: none;
 	border-radius: 6px;
-	background: hsl(217, 89%, 61%);
+	background: var(--focus);
 	color: white;
 	cursor: pointer;
 }
@@ -126,31 +169,24 @@ body {
 .Home li {
 	display: flex;
 	justify-content: space-between;
+	gap: 16px;
 	padding: 8px 0;
 	border-bottom: 1px solid #eee;
 	font-size: 14px;
 }
 
 .Home li span {
-	color: #888;
+	color: var(--muted);
+	white-space: nowrap;
 }
 
-.BoardName {
-	font: inherit;
-	color: inherit;
-	background: transparent;
-	border: 1px solid transparent;
-	border-radius: 4px;
-	padding: 2px 6px;
-	min-width: 200px;
-}
-
-.BoardName:hover {
-	border-color: var(--gray-dark);
-}
-
-.BoardName:focus {
-	outline: none;
-	border-color: var(--focus);
-	background: var(--background);
+@media (max-width: 640px) {
+	.YourName,
+	.RoomWrapper-home {
+		display: none;
+	}
+	.BoardName {
+		width: auto;
+		flex: 1;
+	}
 }

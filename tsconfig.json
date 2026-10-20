@@ -27,6 +27,7 @@
 	"include": [
 		"client",
 		"worker",
+		"shared",
 		"vite.config.ts"
 	]
 }

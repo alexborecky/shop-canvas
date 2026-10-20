@@ -1,56 +1,74 @@
 # Shoptet Canvas — instructions for Claude
 
 A deliberately small, multiplayer whiteboard: **stickies, rectangles, text, images**. Nothing else.
-Built on the tldraw SDK + tldraw sync, running on Cloudflare Workers / Durable Objects / R2.
-Read `docs/CONTEXT.md` for why it's built this way before proposing architecture changes.
+Fully open-source stack, no licence keys: **Excalidraw (MIT) + Yjs (MIT) + y-partyserver (ISC)**
+on Cloudflare Workers / Durable Objects / R2. Read `docs/CONTEXT.md` before proposing architecture changes.
 
 ## Scope guardrails
 
-- In scope: infinite canvas, sticky notes, rectangles, text, image import, live cursors/presence, per-board URLs.
-- Explicitly OUT of scope (don't add unless asked): export, sharing/permissions UI, comments, templates,
-  integrations, connectors/arrows, freehand drawing, mobile-specific work.
-- Access control is handled *outside* the app (Cloudflare Access + company SSO), not in code.
-- Prefer configuring tldraw over reimplementing it. If something feels like it needs a from-scratch
-  canvas feature, check tldraw docs/examples first (https://tldraw.dev/examples).
+- In scope: infinite canvas, stickies, rectangles, text, image import, live cursors/presence,
+  per-board URLs, board names.
+- Out of scope unless asked: export, sharing/permissions UI, comments, templates, integrations,
+  arrows/connectors, freehand drawing, mobile-specific work.
+- Access control lives *outside* the app (Cloudflare Access + company SSO), not in code.
+- No paid/licensed dependencies. Check a package's licence before adding it (MIT/ISC/Apache/BSD ok).
+- No runtime calls to third-party CDNs (fonts are self-hosted; keep it that way).
+
+## Architecture in one breath
+
+Each board = one Durable Object (`worker/BoardServer.ts`) holding a **Yjs document**, persisted to
+the DO's SQLite. Browsers connect over websocket (`/parties/board/:id`). Excalidraw renders the
+board; `client/sync/bindExcalidraw.ts` is the *only* bridge between Excalidraw and Yjs.
+Images go to R2 (`/api/files/:boardId/:fileId`); the doc stores only file metadata.
+
+The Yjs document shape (`shared/boardSchema.ts`) is the long-term contract. It is designed so the
+Excalidraw renderer can later be replaced by our own canvas (Konva or similar) without touching
+the server or losing boards.
 
 ## Commands
 
-- `npm install` — install deps
-- `npm run dev` — Vite + local Worker/Durable Object/R2 emulation at http://localhost:5173
+- `npm install` — install deps (`.npmrc` sets legacy-peer-deps; a types-only peer conflict)
+- `npm run dev` — Vite + local Worker/DO/R2 emulation at http://localhost:5173
+- `npm run typecheck` — TypeScript check
 - `npm run build` — typecheck + production build
-- `npx wrangler deploy` — deploy (after `npm run build`)
-- `npx tsc --noEmit` — typecheck only
+- `npm run deploy` — build + `wrangler deploy`
+- `npm run cf-typegen` — regenerate `worker-configuration.d.ts` after editing `wrangler.toml`
 
 Test multiplayer locally by opening the same `/b/<id>` URL in two browser windows.
+In dev, `window.excalidrawAPI` and `window.boardDoc` are exposed in the console for debugging.
 
 ## Layout
 
-- `client/main.tsx` — routes: `/` (home) and `/b/:roomId` (a board)
-- `client/pages/Root.tsx` — home: "New board" + recent boards (localStorage, per-browser)
-- `client/pages/Room.tsx` — board page; wires `useSync` store into `<Tldraw>`
-- `client/BoardName.tsx` — editable board name; stored via `editor.updateDocumentSettings({ name })`
-- `client/boardConfig.tsx` — **the place to change which tools exist** (toolbar + shortcut stripping)
-- `client/multiplayerAssetStore.tsx` — image upload/download client
-- `worker/worker.ts` — routes: `/api/connect/:roomId` (websocket), `/api/uploads/:id`, `/api/unfurl`
-- `worker/TldrawDurableObject.ts` — one instance per board; persists to DO SQLite
-- `worker/assetUploads.ts` — R2 upload/download
-- `wrangler.toml` — Cloudflare config (worker name, DO binding, R2 bucket, optional custom domain)
+- `shared/boardSchema.ts` — Yjs doc keys (`elements`, `files`, `meta`) — **the data contract**
+- `worker/worker.ts` — entry: `/parties/*` → Durable Object (before itty-router, needs raw Request); `/api/files/*` → R2
+- `worker/BoardServer.ts` — per-board Yjs server + SQLite persistence (chunked)
+- `worker/files.ts` — image upload/download, R2 + edge cache
+- `client/main.tsx` — routes `/` (home) and `/b/:roomId` (board)
+- `client/pages/Room.tsx` — header (name, status, your name, copy link) + board
+- `client/Board.tsx` — `<Excalidraw>` setup, hidden tools CSS, "N" for sticky
+- `client/boardConfig.ts` — **product scope**: hidden tools, UI options, default styles, sticky colours
+- `client/stickies.ts` — sticky creation (yellow rectangle, `customData.kind = 'sticky'`)
+- `client/sync/useBoardDoc.ts` — Y.Doc + websocket provider lifecycle
+- `client/sync/bindExcalidraw.ts` — Excalidraw ⇄ Yjs binding, images, presence
+- `client/BoardName.tsx` — board name in `meta` map
+- `client/identity.ts` — display name + cursor colour (localStorage)
+- `scripts/copy-excalidraw-assets.mjs` — copies Excalidraw fonts to `public/fonts` (runs pre dev/build)
+
+## Gotchas (learned the hard way)
+
+- **Excalidraw mutates elements in place.** Always `structuredClone` when writing to or reading from
+  Yjs, or edits silently stop syncing.
+- **Excalidraw applies `initialData` after mount** and wipes the scene, so the binding does its real
+  initial load on the first `onChange`.
+- Conflict rule (same as Excalidraw's): higher `version` wins, tie → lower `versionNonce` wins.
+- Deleted elements stay in the doc as tombstones (`isDeleted: true`). Fine for now; prune later if boards get big.
+- Hidden tools are hidden with CSS only; their keyboard shortcuts (d, o, a, l, p…) still work.
+- partyserver maps binding name → URL: binding `Board` ⇒ `/parties/board/:id`. Don't use ALL_CAPS binding names.
+- Durable Object class changes need a new `[[migrations]]` tag in `wrangler.toml` once deployed.
+- Brand spelling: team.blue (lowercase).
 
 ## Conventions
 
-- TypeScript strict, tabs, single quotes (matches template).
-- Keep custom code in clearly named files (`boardConfig.tsx`, etc.) rather than scattering edits
-  through template files — makes tldraw template upgrades easier.
-- Custom shapes: must be registered on BOTH client (`<Tldraw shapeUtils>` / `useSync`) and server
-  schema in `TldrawDurableObject.ts`, or sync will reject them.
-- Changing Durable Object classes requires a new `[[migrations]]` entry in `wrangler.toml`.
-
-## Gotchas
-
-- **tldraw licence**: works on localhost without a key; any deployed domain needs
-  `VITE_TLDRAW_LICENSE_KEY` (see `.env.example`). Check https://tldraw.dev/pricing — don't assume
-  internal use is free.
-- Hidden tools still had keyboard shortcuts; `boardOverrides` strips them. If you add a tool back,
-  add it to `ALLOWED_TOOLS` and to the toolbar.
-- Images never go in the synced document — upload to R2, sync only the URL (template already does this).
-- Brand spelling: team.blue (lowercase).
+- TypeScript strict, tabs, single quotes.
+- Keep Excalidraw-specific code inside `client/Board.tsx`, `client/stickies.ts`, `client/boardConfig.ts`
+  and `client/sync/bindExcalidraw.ts`. Everything else should be renderer-agnostic.

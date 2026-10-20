@@ -6,5 +6,7 @@ import { defineConfig } from 'vite'
 export default defineConfig(() => {
 	return {
 		plugins: [cloudflare(), react()],
+		// Excalidraw reads this at module load; required when bundling it with Vite.
+		define: { 'process.env.IS_PREACT': JSON.stringify('false') },
 	}
 })

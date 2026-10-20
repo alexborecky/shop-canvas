@@ -1,4 +1,3 @@
-
 name = "shoptet-canvas"
 main = "worker/worker.ts"
 compatibility_date = "2025-05-08"
@@ -6,7 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 upload_source_maps = true
 preview_urls = true
 
-# Custom domain — set to your own, or delete this block to use the workers.dev URL.
+# Custom domain — set to your own, or leave commented to use the workers.dev URL.
 # [[routes]]
 # pattern = "canvas.example.com"
 # custom_domain = true
@@ -14,23 +13,23 @@ preview_urls = true
 [observability]
 enabled = true
 
+# Static frontend (vite build output). API + sync paths always hit the worker first.
 [assets]
 not_found_handling = "single-page-application"
 directory = "./dist/client"
+run_worker_first = ["/api/*", "/parties/*"]
 
-# Set up the durable object used for each tldraw room
+# One Durable Object per board. Binding name "Board" => party "board" => /parties/board/:id
 [durable_objects]
-bindings = [{ name = "TLDRAW_DURABLE_OBJECT", class_name = "TldrawDurableObject" }]
+bindings = [{ name = "Board", class_name = "BoardServer" }]
 
-# Durable objects require migrations to create/modify/delete them
-# Using new_sqlite_classes for SQLite-backed storage
+# Durable Object classes need migrations. Never edit an existing tag after deploying; add a new one.
 [[migrations]]
 tag = "v1"
-new_sqlite_classes = ["TldrawDurableObject"]
+new_sqlite_classes = ["BoardServer"]
 
-# We store asset uploads (images, videos) in an R2 bucket.
-# Room data is stored in Durable Object SQLite storage.
+# Uploaded images
 [[r2_buckets]]
-binding = 'TLDRAW_BUCKET'
-bucket_name = 'shoptet-canvas-uploads'
-preview_bucket_name = 'shoptet-canvas-uploads-preview'
+binding = "BOARD_FILES"
+bucket_name = "shoptet-canvas-uploads"
+preview_bucket_name = "shoptet-canvas-uploads-preview"
