@@ -1,15 +1,15 @@
 # Shoptet Canvas — instructions for Claude
 
-A deliberately small, multiplayer whiteboard: **stickies, rectangles, text, images**. Nothing else.
+A deliberately small, multiplayer whiteboard: **stickies, basic shapes, arrows/lines, freehand, text, images**.
 Fully open-source stack, no licence keys: **Excalidraw (MIT) + Yjs (MIT) + y-partyserver (ISC)**
 on Cloudflare Workers / Durable Objects / R2. Read `docs/CONTEXT.md` before proposing architecture changes.
 
 ## Scope guardrails
 
-- In scope: infinite canvas, stickies, rectangles, text, image import, live cursors/presence,
+- In scope: infinite canvas, stickies, shapes (rectangle/diamond/ellipse), arrows, lines, freehand, text, image import, live cursors/presence,
   per-board URLs, board names.
 - Out of scope unless asked: export, sharing/permissions UI, comments, templates, integrations,
-  arrows/connectors, freehand drawing, mobile-specific work.
+  frames, embeds, mobile-specific work.
 - Access control lives *outside* the app (Cloudflare Access + company SSO), not in code.
 - No paid/licensed dependencies. Check a package's licence before adding it (MIT/ISC/Apache/BSD ok).
 - No runtime calls to third-party CDNs (fonts are self-hosted; keep it that way).
@@ -62,7 +62,7 @@ In dev, `window.excalidrawAPI` and `window.boardDoc` are exposed in the console 
   initial load on the first `onChange`.
 - Conflict rule (same as Excalidraw's): higher `version` wins, tie → lower `versionNonce` wins.
 - Deleted elements stay in the doc as tombstones (`isDeleted: true`). Fine for now; prune later if boards get big.
-- Hidden tools are hidden with CSS only; their keyboard shortcuts (d, o, a, l, p…) still work.
+- Hidden tools (frames, embeds…) are hidden with CSS only; their keyboard shortcuts still work.
 - partyserver maps binding name → URL: binding `Board` ⇒ `/parties/board/:id`. Don't use ALL_CAPS binding names.
 - Durable Object class changes need a new `[[migrations]]` tag in `wrangler.toml` once deployed.
 - Brand spelling: team.blue (lowercase).

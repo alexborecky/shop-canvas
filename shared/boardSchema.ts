@@ -5,9 +5,12 @@
  * canvas later, the new renderer reads/writes these same maps (and can migrate element JSON).
  *
  *   doc.getMap('elements')  id -> element JSON (currently Excalidraw element format, incl. deleted
- *                           tombstones with isDeleted: true; `version` decides which edit wins)
+ *                           tombstones with isDeleted: true; `version` decides which edit wins).
+ *                           Stickies are rectangles with customData { kind: 'sticky', author?: string },
+ *                           author = creator's display name at creation time.
  *   doc.getMap('files')     fileId -> FileMeta (bytes live in R2 at /api/files/:boardId/:fileId)
  *   doc.getMap('meta')      'name' -> board name (string)
+ *                           'background' -> canvas background colour (CSS colour string)
  */
 export const ELEMENTS_KEY = 'elements'
 export const FILES_KEY = 'files'

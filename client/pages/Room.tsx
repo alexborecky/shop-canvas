@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Board } from '../Board'
 import { BoardName } from '../BoardName'
+import { Collaborators } from '../Collaborators'
 import { getIdentity, Identity, setIdentityName } from '../identity'
 import { rememberBoard } from '../recentBoards'
 import { ConnectionStatus, useBoardDoc } from '../sync/useBoardDoc'
@@ -24,6 +25,7 @@ export function Room() {
 				<StatusDot status={status} />
 				{board ? <BoardName doc={board.doc} roomId={roomId} /> : <span>{roomId}</span>}
 				<div className="RoomWrapper-spacer" />
+				{board && <Collaborators provider={board.provider} />}
 				<input
 					className="HeaderInput YourName"
 					placeholder="Your name"

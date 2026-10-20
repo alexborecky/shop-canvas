@@ -58,7 +58,8 @@ and a playground for canvas-style editing ideas (selection models, contextual to
 ## Status
 
 - [x] Excalidraw + Yjs + Durable Object sync, SQLite persistence
-- [x] Tools limited to select, hand, rectangle, text, image, eraser + **Sticky** button / `N`
+- [x] Toolbar: select, hand, rectangle, diamond, ellipse, arrow, line, draw, text, image, eraser + **Sticky** button / `N`
+  (diamond/ellipse/arrow/line/draw re-enabled on request; frames, embeds, AI tools stay hidden)
 - [x] Live cursors with names, selection highlights, laser pointer
 - [x] Image upload to R2, synced to others, reload-safe
 - [x] Board rename (synced), recent boards list, connection status dot

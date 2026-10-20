@@ -15,7 +15,7 @@ import type {
 	SocketId,
 } from '@excalidraw/excalidraw/types'
 import * as Y from 'yjs'
-import { ELEMENTS_KEY, FILES_KEY, FileMeta } from '../../shared/boardSchema'
+import { ELEMENTS_KEY, FILES_KEY, FileMeta, META_KEY } from '../../shared/boardSchema'
 import type { Identity } from '../identity'
 import type { BoardDoc } from './useBoardDoc'
 
@@ -34,6 +34,7 @@ interface Presence {
  *
  * - Local edits:  Excalidraw onChange -> write changed elements (by `version`) into Y.Map
  * - Remote edits: Y.Map observer -> reconcileElements() -> excalidrawAPI.updateScene()
+ * - Background:   appState.viewBackgroundColor <-> Y.Map 'meta' 'background'
  * - Images:       bytes uploaded to R2 once, Y.Map 'files' records that they exist;
  *                 other clients download missing ones and addFiles()
  * - Presence:     Yjs awareness carries name/colour/pointer/selection -> Excalidraw collaborators
@@ -48,6 +49,7 @@ export function bindExcalidraw(
 ) {
 	const yElements = doc.getMap<ExcalidrawElement>(ELEMENTS_KEY)
 	const yFiles = doc.getMap<FileMeta>(FILES_KEY)
+	const yMeta = doc.getMap<string>(META_KEY)
 	const awareness = provider.awareness
 
 	let lastSyncedVersion = -1
@@ -56,6 +58,9 @@ export function bindExcalidraw(
 	let initialised = false
 	const uploading = new Set<string>()
 	const downloading = new Set<string>()
+	// background colour last seen in the doc / applied to Excalidraw; a difference in onChange
+	// means the user picked a new one
+	let lastBackground: string | undefined
 
 	// ---------- remote -> local ----------
 
@@ -78,8 +83,19 @@ export function bindExcalidraw(
 	const onFilesChanged = (_e: Y.YMapEvent<FileMeta>, tx: Y.Transaction) => {
 		if (tx.origin !== LOCAL) void fetchMissingFiles()
 	}
+	const applyBackground = () => {
+		const background = yMeta.get('background')
+		lastBackground = background ?? api.getAppState().viewBackgroundColor
+		if (background && background !== api.getAppState().viewBackgroundColor) {
+			api.updateScene({ appState: { viewBackgroundColor: background }, captureUpdate: CaptureUpdateAction.NEVER })
+		}
+	}
+	const onMetaChanged = (e: Y.YMapEvent<string>, tx: Y.Transaction) => {
+		if (tx.origin !== LOCAL && e.keysChanged.has('background')) applyBackground()
+	}
 	yElements.observe(onElementsChanged)
 	yFiles.observe(onFilesChanged)
+	yMeta.observe(onMetaChanged)
 
 	async function fetchMissingFiles() {
 		const have = api.getFiles()
@@ -118,7 +134,12 @@ export function bindExcalidraw(
 		if (!initialised) {
 			initialised = true
 			applyRemote()
+			applyBackground()
 			return
+		}
+		if (appState.viewBackgroundColor !== lastBackground) {
+			lastBackground = appState.viewBackgroundColor
+			doc.transact(() => yMeta.set('background', appState.viewBackgroundColor), LOCAL)
 		}
 		const version = getSceneVersion(elements)
 		if (version !== lastSyncedVersion) {
@@ -224,6 +245,7 @@ export function bindExcalidraw(
 		dispose() {
 			yElements.unobserve(onElementsChanged)
 			yFiles.unobserve(onFilesChanged)
+			yMeta.unobserve(onMetaChanged)
 			awareness.off('change', onAwarenessChange)
 		},
 	}
