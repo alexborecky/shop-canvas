@@ -1,7 +1,8 @@
 import { useSync } from '@tldraw/sync'
 import { ReactNode, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Tldraw } from 'tldraw'
+import { Editor, Tldraw } from 'tldraw'
+import { BoardName } from '../BoardName'
 import { boardComponents, boardOverrides } from '../boardConfig'
 import { rememberBoard } from '../recentBoards'
 import { getBookmarkPreview } from '../getBookmarkPreview'
@@ -9,6 +10,8 @@ import { multiplayerAssetStore } from '../multiplayerAssetStore'
 
 export function Room() {
 	const { roomId } = useParams<{ roomId: string }>()
+
+	const [editor, setEditor] = useState<Editor | null>(null)
 
 	useEffect(() => {
 		if (roomId) rememberBoard(roomId)
@@ -23,7 +26,7 @@ export function Room() {
 	})
 
 	return (
-		<RoomWrapper roomId={roomId}>
+		<RoomWrapper roomId={roomId} editor={editor}>
 			<Tldraw
 				// we can pass the connected store into the Tldraw component which will handle
 				// loading states & enable multiplayer UX like cursors & a presence menu
@@ -36,13 +39,23 @@ export function Room() {
 				onMount={(editor) => {
 					// when the editor is ready, we need to register our bookmark unfurling service
 					editor.registerExternalAssetHandler('url', getBookmarkPreview)
+					setEditor(editor)
+					return () => setEditor(null)
 				}}
 			/>
 		</RoomWrapper>
 	)
 }
 
-function RoomWrapper({ children, roomId }: { children: ReactNode; roomId?: string }) {
+function RoomWrapper({
+	children,
+	roomId,
+	editor,
+}: {
+	children: ReactNode
+	roomId?: string
+	editor: Editor | null
+}) {
 	const [didCopy, setDidCopy] = useState(false)
 
 	useEffect(() => {
@@ -58,7 +71,7 @@ function RoomWrapper({ children, roomId }: { children: ReactNode; roomId?: strin
 					Shoptet Canvas
 				</Link>
 				<WifiIcon />
-				<div>{roomId}</div>
+				{editor && roomId ? <BoardName editor={editor} roomId={roomId} /> : <div>{roomId}</div>}
 				<button
 					className="RoomWrapper-copy"
 					onClick={() => {

@@ -28,6 +28,7 @@ Test multiplayer locally by opening the same `/b/<id>` URL in two browser window
 - `client/main.tsx` — routes: `/` (home) and `/b/:roomId` (a board)
 - `client/pages/Root.tsx` — home: "New board" + recent boards (localStorage, per-browser)
 - `client/pages/Room.tsx` — board page; wires `useSync` store into `<Tldraw>`
+- `client/BoardName.tsx` — editable board name; stored via `editor.updateDocumentSettings({ name })`
 - `client/boardConfig.tsx` — **the place to change which tools exist** (toolbar + shortcut stripping)
 - `client/multiplayerAssetStore.tsx` — image upload/download client
 - `worker/worker.ts` — routes: `/api/connect/:roomId` (websocket), `/api/uploads/:id`, `/api/unfurl`

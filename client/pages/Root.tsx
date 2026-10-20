@@ -21,7 +21,7 @@ export function Root() {
 					<ul>
 						{recent.map((b) => (
 							<li key={b.id}>
-								<a href={`/b/${b.id}`}>{b.id}</a>
+								<a href={`/b/${b.id}`}>{b.name || b.id}</a>
 								<span>{new Date(b.openedAt).toLocaleString()}</span>
 							</li>
 						))}
