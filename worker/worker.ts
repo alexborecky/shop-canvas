@@ -1,4 +1,4 @@
-import { AutoRouter, error, IRequest } from 'itty-router'
+import { AutoRouter, error, IRequest, json } from 'itty-router'
 import { routePartykitRequest } from 'partyserver'
 import { handleFileDownload, handleFileUpload } from './files'
 
@@ -19,6 +19,8 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	// Image upload/download (R2)
 	.post('/api/files/:boardId/:fileId', handleFileUpload)
 	.get('/api/files/:boardId/:fileId', handleFileDownload)
+	// Server clock, so clients can agree on when a shared timer ends
+	.get('/api/time', () => json({ now: Date.now() }, { headers: { 'Cache-Control': 'no-store' } }))
 	.all('*', () => error(404))
 
 export default {

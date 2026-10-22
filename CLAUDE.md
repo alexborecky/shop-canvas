@@ -7,7 +7,7 @@ on Cloudflare Workers / Durable Objects / R2. Read `docs/CONTEXT.md` before prop
 ## Scope guardrails
 
 - In scope: infinite canvas, stickies, shapes (rectangle/diamond/ellipse), arrows, lines, freehand, text, image import, live cursors/presence,
-  per-board URLs, board names.
+  per-board URLs, board names, a shared countdown timer.
 - Out of scope unless asked: export, sharing/permissions UI, comments, templates, integrations,
   frames, embeds, mobile-specific work.
 - Access control lives *outside* the app (Cloudflare Access + company SSO), not in code.
@@ -39,19 +39,26 @@ In dev, `window.excalidrawAPI` and `window.boardDoc` are exposed in the console 
 
 ## Layout
 
-- `shared/boardSchema.ts` — Yjs doc keys (`elements`, `files`, `meta`) — **the data contract**
-- `worker/worker.ts` — entry: `/parties/*` → Durable Object (before itty-router, needs raw Request); `/api/files/*` → R2
+- `shared/boardSchema.ts` — Yjs doc keys (`elements`, `files`, `meta`, `timer`) — **the data contract**
+- `worker/worker.ts` — entry: `/parties/*` → Durable Object (before itty-router, needs raw Request); `/api/files/*` → R2;
+  `/api/time` → server clock
 - `worker/BoardServer.ts` — per-board Yjs server + SQLite persistence (chunked)
 - `worker/files.ts` — image upload/download, R2 + edge cache
 - `client/main.tsx` — routes `/` (home) and `/b/:roomId` (board)
-- `client/pages/Room.tsx` — header (name, status, your name, copy link) + board
-- `client/Board.tsx` — `<Excalidraw>` setup, hidden tools CSS, "N" for sticky
+- `client/pages/Room.tsx` — board + the contents of its two floating toolbars (top-left: status, name next to the menu button; top-right: timer, avatars, copy link). No page header.
+- `client/Board.tsx` — `<Excalidraw>` setup, hidden tools + toolbar-placement CSS, "N" for sticky; places Room's toolbars (`menuBar` portalled after the menu button, `toolbar` via `renderTopRightUI`)
 - `client/boardConfig.ts` — **product scope**: hidden tools, UI options, default styles, sticky colours
 - `client/stickies.ts` — sticky creation (yellow rectangle, `customData.kind = 'sticky'`)
 - `client/sync/useBoardDoc.ts` — Y.Doc + websocket provider lifecycle
 - `client/sync/bindExcalidraw.ts` — Excalidraw ⇄ Yjs binding, images, presence
+- `client/sync/serverClock.ts` — `serverNow()`: clock offset to the server, estimated on connect (dev: `?skew=30` fakes a fast clock)
+- `client/timer/useBoardTimer.ts` — shared countdown: reads/writes the `timer` map, ticks locally from `endsAt`; −/+ step rule
+- `client/timer/TimerPanel.tsx` — toolbar timer button + the floating panel (setup / running)
+- `client/timer/chime.ts` — Web Audio chime at zero
 - `client/BoardName.tsx` — board name in `meta` map
 - `client/identity.ts` — display name + cursor colour (localStorage)
+- `client/MyAvatar.tsx` — your avatar (initials) in the top-right toolbar; click to rename
+- `client/NamePrompt.tsx` — first-visit name modal; blurs and blocks the board (`inert`) until a name is given
 - `scripts/copy-excalidraw-assets.mjs` — copies Excalidraw fonts to `public/fonts` (runs pre dev/build)
 
 ## Gotchas (learned the hard way)
@@ -65,10 +72,13 @@ In dev, `window.excalidrawAPI` and `window.boardDoc` are exposed in the console 
 - Hidden tools (frames, embeds…) are hidden with CSS only; their keyboard shortcuts still work.
 - partyserver maps binding name → URL: binding `Board` ⇒ `/parties/board/:id`. Don't use ALL_CAPS binding names.
 - Durable Object class changes need a new `[[migrations]]` tag in `wrangler.toml` once deployed.
+- **Timer writes set every field** of the `timer` map (null where unused, never `delete`). Yjs merges
+  concurrent writes per key; partial writes could combine into an invalid state.
+- Timer maths uses `serverNow()`, never `Date.now()`: laptop clocks are often off by seconds.
 - Brand spelling: team.blue (lowercase).
 
 ## Conventions
 
 - TypeScript strict, tabs, single quotes.
 - Keep Excalidraw-specific code inside `client/Board.tsx`, `client/stickies.ts`, `client/boardConfig.ts`
-  and `client/sync/bindExcalidraw.ts`. Everything else should be renderer-agnostic.
+  and `client/sync/bindExcalidraw.ts`. Everything else (incl. `client/timer/`) should be renderer-agnostic.

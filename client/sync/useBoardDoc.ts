@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import YProvider from 'y-partyserver/provider'
 import * as Y from 'yjs'
 import { PARTY } from '../../shared/boardSchema'
+import { syncServerClock } from './serverClock'
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
 
@@ -25,7 +26,9 @@ export function useBoardDoc(boardId: string) {
 
 		const onStatus = ({ status }: { status: ConnectionStatus }) => setStatus(status)
 		const onSync = (synced: boolean) => {
-			if (synced) setBoard({ doc, provider })
+			if (!synced) return
+			setBoard({ doc, provider })
+			void syncServerClock()
 		}
 		provider.on('status', onStatus)
 		provider.on('sync', onSync)

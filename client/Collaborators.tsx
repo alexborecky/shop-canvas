@@ -31,13 +31,13 @@ function useCollaborators(provider: YProvider) {
 	return JSON.parse(snapshot) as Identity[]
 }
 
-function initials(name: string) {
+export function initials(name: string) {
 	const parts = name.trim().split(/\s+/).filter(Boolean)
 	if (!parts.length) return '?'
 	return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase()
 }
 
-/** Avatars of the other people on the board, for the header. */
+/** Avatars of the other people on the board, for the top-right toolbar. */
 export function Collaborators({ provider }: { provider: YProvider }) {
 	const users = useCollaborators(provider)
 	if (!users.length) return null

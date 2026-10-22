@@ -43,6 +43,10 @@ and a playground for canvas-style editing ideas (selection models, contextual to
   Stored as a chunked Yjs update in table `doc_chunks`.
 - **Images**: R2 bucket `shoptet-canvas-uploads` at `files/<boardId>/<fileId>` (fileId = content hash).
   The doc's `files` map just records that the file exists + its mime type.
+- **Shared timer**: the doc's `timer` map (status, last set duration, `endsAt` / `remainingMs`).
+  Written only when someone presses a button (plus one write back to idle after "Time's up"); each client counts down locally from `endsAt`, using
+  the server's clock (`GET /api/time`, offset estimated on connect) so skewed laptop clocks still agree.
+  Not part of undo.
 - **Recent boards on the home page** and **your display name**: browser localStorage only.
   There is no server-side list of boards — the URL is the only way back to a board.
 - **Locally** (`npm run dev`): all of it is emulated in `.wrangler/state/`. Delete to reset.
@@ -64,6 +68,7 @@ and a playground for canvas-style editing ideas (selection models, contextual to
 - [x] Image upload to R2, synced to others, reload-safe
 - [x] Board rename (synced), recent boards list, connection status dot
 - [x] Fonts self-hosted, zero third-party requests at runtime
+- [x] Shared countdown timer, Miro-style floating panel (set mm:ss, play/pause/stop, +1m/+5m, chime at zero)
 - [x] Verified: two browsers sync shapes/stickies/text/images/name; board survives everyone leaving; prod build works
 - [ ] Deploy to Cloudflare + Cloudflare Access (SSO)
 - [ ] Server-side board directory (list all boards)

@@ -3,7 +3,7 @@ import type * as Y from 'yjs'
 import { META_KEY } from '../shared/boardSchema'
 import { rememberBoard } from './recentBoards'
 
-export const UNTITLED = 'Untitled board'
+export const UNTITLED = 'Untitled'
 
 /** Reactive read of the board name from the shared document (doc.getMap('meta').get('name')). */
 function useBoardName(doc: Y.Doc) {
@@ -18,7 +18,7 @@ function useBoardName(doc: Y.Doc) {
 }
 
 /**
- * Editable board name in the header. Stored in the board's Yjs document, so it is persisted
+ * Editable board name in the top-left toolbar. Stored in the board's Yjs document, so it is persisted
  * with the board and synced live to everyone on it.
  */
 export function BoardName({ doc, roomId }: { doc: Y.Doc; roomId: string }) {
@@ -50,24 +50,29 @@ export function BoardName({ doc, roomId }: { doc: Y.Doc; roomId: string }) {
 		if (next !== name) doc.getMap<string>(META_KEY).set('name', next)
 	}
 
+	const shown = editing ? draft : name
+
 	return (
-		<input
-			className="HeaderInput BoardName"
-			value={editing ? draft : name}
-			placeholder={UNTITLED}
-			aria-label="Board name"
-			maxLength={120}
-			onFocus={() => setEditing(true)}
-			onChange={(e) => setDraft(e.target.value)}
-			onBlur={commit}
-			onKeyDown={(e) => {
-				e.stopPropagation()
-				if (e.key === 'Enter') e.currentTarget.blur()
-				if (e.key === 'Escape') {
-					cancelled.current = true
-					e.currentTarget.blur()
-				}
-			}}
-		/>
+		// the hidden copy of the text sizes the input to its content
+		<span className="BoardName" data-value={shown || UNTITLED}>
+			<input
+				className="HeaderInput BoardName-input"
+				value={shown}
+				placeholder={UNTITLED}
+				aria-label="Board name"
+				maxLength={120}
+				onFocus={() => setEditing(true)}
+				onChange={(e) => setDraft(e.target.value)}
+				onBlur={commit}
+				onKeyDown={(e) => {
+					e.stopPropagation()
+					if (e.key === 'Enter') e.currentTarget.blur()
+					if (e.key === 'Escape') {
+						cancelled.current = true
+						e.currentTarget.blur()
+					}
+				}}
+			/>
+		</span>
 	)
 }

@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { Board } from '../Board'
 import { BoardName } from '../BoardName'
 import { Collaborators } from '../Collaborators'
 import { getIdentity, Identity, setIdentityName } from '../identity'
+import { MyAvatar } from '../MyAvatar'
+import { NamePrompt } from '../NamePrompt'
 import { rememberBoard } from '../recentBoards'
 import { ConnectionStatus, useBoardDoc } from '../sync/useBoardDoc'
+import { TimerPanel } from '../timer/TimerPanel'
 
 export function Room() {
 	const { roomId = '' } = useParams<{ roomId: string }>()
 	const { board, status } = useBoardDoc(roomId)
 	const [identity, setIdentity] = useState<Identity>(getIdentity)
+	// no name yet: the board stays covered until you give one
+	const [askName, setAskName] = useState(() => !identity.name)
 
 	useEffect(() => {
 		if (roomId) rememberBoard(roomId)
@@ -18,32 +23,40 @@ export function Room() {
 
 	return (
 		<div className="RoomWrapper">
-			<div className="RoomWrapper-header">
-				<Link to="/" className="RoomWrapper-home">
-					Shoptet Canvas
-				</Link>
-				<StatusDot status={status} />
-				{board ? <BoardName doc={board.doc} roomId={roomId} /> : <span>{roomId}</span>}
-				<div className="RoomWrapper-spacer" />
-				{board && <Collaborators provider={board.provider} />}
-				<input
-					className="HeaderInput YourName"
-					placeholder="Your name"
-					aria-label="Your name (shown on your cursor)"
-					value={identity.name}
-					maxLength={40}
-					onChange={(e) => setIdentity(setIdentityName(e.target.value))}
-					onKeyDown={(e) => e.stopPropagation()}
-				/>
-				<CopyLinkButton />
-			</div>
-			<div className="RoomWrapper-content">
+			{/* inert: no clicks, focus or Tab into the board while the name modal is up */}
+			<div className="RoomWrapper-content" inert={askName}>
 				{board ? (
-					<Board board={board} boardId={roomId} identity={identity} />
+					<Board
+						board={board}
+						boardId={roomId}
+						identity={identity}
+						menuBar={
+							<>
+								<StatusDot status={status} />
+								<BoardName doc={board.doc} roomId={roomId} />
+							</>
+						}
+						toolbar={
+							<>
+								<TimerPanel doc={board.doc} />
+								<Collaborators provider={board.provider} />
+								<MyAvatar identity={identity} onRename={(name) => setIdentity(setIdentityName(name))} />
+								<CopyLinkButton />
+							</>
+						}
+					/>
 				) : (
 					<div className="Loading">Connecting…</div>
 				)}
 			</div>
+			{askName && (
+				<NamePrompt
+					onSave={(name) => {
+						setIdentity(setIdentityName(name))
+						setAskName(false)
+					}}
+				/>
+			)}
 		</div>
 	)
 }

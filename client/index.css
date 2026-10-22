@@ -27,24 +27,24 @@ body {
 	inset: 0;
 }
 
-.RoomWrapper-header {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	padding: 8px 16px;
-	border-bottom: 1px solid var(--border);
+/*
+ * Floating toolbars over the board, styled like Excalidraw's tool island (and themed with its
+ * tokens, so they follow light/dark). Top-left (menu button + name) is laid out in Board.tsx.
+ */
+.BoardMenuBar,
+.BoardToolbar {
 	font-size: 14px;
 }
 
-.RoomWrapper-home {
-	font-weight: 700;
-	color: inherit;
-	text-decoration: none;
-	white-space: nowrap;
-}
-
-.RoomWrapper-spacer {
-	flex: 1;
+.BoardToolbar {
+	position: relative; /* the timer panel and name popover hang below it */
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px;
+	background: var(--island-bg-color);
+	box-shadow: var(--shadow-island);
+	border-radius: var(--border-radius-lg);
 }
 
 .Collaborators {
@@ -59,7 +59,7 @@ body {
 	height: 28px;
 	margin-left: -6px;
 	border-radius: 50%;
-	border: 2px solid var(--background);
+	border: 2px solid var(--island-bg-color, var(--background));
 	color: #fff;
 	font-size: 11px;
 	font-weight: 600;
@@ -71,14 +71,86 @@ body {
 	background: #868e96;
 }
 
-.RoomWrapper-copy {
+/* Your own avatar: set apart from the others (no overlap, a ring) and opens the name popover */
+.MyAvatar {
+	position: relative;
+	flex: none;
+	margin-left: 4px;
+}
+
+.MyAvatar-button {
+	margin-left: 0;
+	padding: 0;
+	font-family: inherit;
+	cursor: pointer;
+	box-shadow: 0 0 0 1.5px var(--default-border-color, var(--border));
+}
+
+.MyAvatar-button:hover,
+.MyAvatar-button[aria-expanded='true'] {
+	box-shadow: 0 0 0 2px var(--focus);
+}
+
+.MyAvatar-popover {
+	position: absolute;
+	top: calc(100% + 12px);
+	right: -4px; /* flush with the toolbar's edge */
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	width: 240px;
+	padding: 14px;
+	color: var(--text-primary-color, var(--text));
+	background: var(--island-bg-color, var(--background));
+	border-radius: 12px;
+	box-shadow: var(--shadow-island);
+}
+
+.MyAvatar-label {
+	font-weight: 600;
+}
+
+.MyAvatar-input {
+	border-color: var(--default-border-color, var(--border));
+	padding: 6px 8px;
+}
+
+.MyAvatar-hint {
+	font-size: 12px;
+	color: var(--muted);
+}
+
+.MyAvatar-save {
+	align-self: flex-end;
 	font: inherit;
-	background: #f1f3f5;
-	border: 1px solid var(--border);
+	color: var(--color-surface-lowest, #fff);
+	background: var(--color-primary, var(--focus));
+	border: 1px solid var(--color-primary, var(--focus));
 	border-radius: 6px;
-	padding: 4px 12px;
+	padding: 4px 14px;
+	cursor: pointer;
+}
+
+.MyAvatar-save:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.RoomWrapper-copy {
+	height: var(--default-button-size);
+	padding: 0 12px;
+	font: inherit;
+	font-weight: 600;
+	color: var(--color-surface-lowest); /* white on light, near-black on dark's pale primary */
+	background: var(--color-primary);
+	border: none;
+	border-radius: var(--border-radius-lg);
 	cursor: pointer;
 	white-space: nowrap;
+}
+
+.RoomWrapper-copy:hover {
+	background: var(--color-primary-darker);
 }
 
 .RoomWrapper-content {
@@ -109,22 +181,99 @@ body {
 }
 
 .HeaderInput:hover {
-	border-color: var(--border);
+	border-color: var(--default-border-color, var(--border));
 }
 
 .HeaderInput:focus {
 	outline: none;
-	border-color: var(--focus);
+	border-color: var(--color-primary, var(--focus));
 }
 
 .BoardName {
-	width: 260px;
+	display: inline-grid;
+	min-width: 0;
 	font-weight: 600;
 }
 
-.YourName {
-	width: 140px;
+/* input and hidden copy of its text share one grid cell: the copy sets the width */
+.BoardName::after {
+	content: attr(data-value) ' ';
+	visibility: hidden;
+	white-space: pre;
+	overflow: hidden;
+	padding: 3px 8px;
+	border: 1px solid transparent;
+}
+
+.BoardName::after,
+.BoardName-input {
+	grid-area: 1 / 1;
+	box-sizing: border-box;
+	font: inherit;
+}
+
+.BoardName-input {
+	width: 0; /* no intrinsic width (inputs default to ~20 characters): fill the cell instead */
+	min-width: 100%;
+}
+
+/* First-visit name modal: covers and blurs the whole board until a name is given */
+.NamePrompt-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 100;
+	display: grid;
+	place-items: center;
+	padding: 16px;
+	background: rgba(255, 255, 255, 0.35);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+}
+
+.NamePrompt {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	width: 100%;
+	max-width: 340px;
+	padding: 24px;
+	background: var(--background);
+	border: 1px solid var(--border);
+	border-radius: 14px;
+	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+
+.NamePrompt-title {
+	font-size: 18px;
+	font-weight: 700;
+}
+
+.NamePrompt-hint {
+	margin-top: -4px;
+	font-size: 13px;
+	color: var(--muted);
+}
+
+.NamePrompt-input {
 	border-color: var(--border);
+	padding: 8px 10px;
+	font-size: 15px;
+}
+
+.NamePrompt-save {
+	font: inherit;
+	font-weight: 600;
+	color: #fff;
+	background: var(--focus);
+	border: 1px solid var(--focus);
+	border-radius: 8px;
+	padding: 8px 12px;
+	cursor: pointer;
+}
+
+.NamePrompt-save:disabled {
+	opacity: 0.5;
+	cursor: default;
 }
 
 .StatusDot {
@@ -141,6 +290,218 @@ body {
 
 .StatusDot--disconnected {
 	background: #e03131;
+}
+
+/* Shared countdown: toolbar button + panel hanging below the top-right toolbar */
+.TimerButton {
+	display: grid;
+	place-items: center;
+	flex: none;
+	width: var(--default-button-size);
+	height: var(--default-button-size);
+	color: var(--text-primary-color);
+	background: transparent;
+	border: none;
+	border-radius: var(--border-radius-lg);
+	cursor: pointer;
+}
+
+.TimerButton:hover {
+	background: var(--color-surface-high);
+}
+
+.TimerButton--open {
+	background: var(--color-surface-primary-container);
+}
+
+/* a light card in both themes: its colours are its own */
+.TimerPanel {
+	position: absolute;
+	top: calc(100% + 12px);
+	right: -4px; /* flush with the toolbar's edge */
+	padding: 16px 40px 16px 16px;
+	color: var(--text);
+	font-family: Nunito, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	font-variant-numeric: tabular-nums;
+	background: var(--background);
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+.TimerPanel--active {
+	background: #e7f0ff;
+	border-color: #c9dcfb;
+}
+
+:where(.TimerPanel button) {
+	font: inherit;
+	color: inherit;
+	cursor: pointer;
+}
+
+:where(.TimerPanel button):disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+
+.TimerPanel-close {
+	position: absolute;
+	top: 6px;
+	right: 6px;
+	width: 26px;
+	height: 26px;
+	font-size: 18px;
+	line-height: 1;
+	color: var(--muted);
+	background: transparent;
+	border: none;
+	border-radius: 6px;
+}
+
+.TimerPanel-close:hover {
+	color: var(--text);
+	background: rgba(0, 0, 0, 0.05);
+}
+
+.TimerPanel-body {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	min-height: 64px;
+}
+
+.TimerPanel-setup {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.TimerPanel-step {
+	width: 32px;
+	height: 32px;
+	font-size: 20px;
+	line-height: 1;
+	background: transparent;
+	border: 1px solid var(--border);
+	border-radius: 6px;
+}
+
+.TimerPanel-step:not(:disabled):hover {
+	background: #f1f3f5;
+}
+
+.TimerPanel-time {
+	display: flex;
+	align-items: center;
+	font-size: 32px;
+	font-weight: 700;
+}
+
+.TimerPanel-digits {
+	width: 1.5em;
+	padding: 0 2px;
+	font: inherit;
+	color: inherit;
+	text-align: center;
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 6px;
+}
+
+.TimerPanel-digits:hover {
+	border-color: var(--border);
+}
+
+.TimerPanel-digits:focus {
+	outline: none;
+	border-color: var(--focus);
+}
+
+.TimerPanel-colon {
+	padding-bottom: 0.1em;
+}
+
+.TimerPanel-divider {
+	align-self: stretch;
+	width: 1px;
+	background: var(--border);
+}
+
+.TimerPanel-primary,
+.TimerPanel-secondary {
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	border-radius: 10px;
+}
+
+.TimerPanel-primary {
+	color: #fff;
+	background: #1e1e1e;
+	border: 1px solid #1e1e1e;
+}
+
+.TimerPanel-primary:hover {
+	background: #3a3a3a;
+}
+
+.TimerPanel-play {
+	width: 52px;
+	height: 52px;
+}
+
+.TimerPanel-secondary {
+	background: #fff;
+	border: 1px solid #c9d1dc;
+}
+
+.TimerPanel-secondary:hover {
+	background: #f8f9fa;
+}
+
+.TimerPanel-countdown {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
+}
+
+.TimerPanel-clock {
+	font-size: 36px;
+	font-weight: 700;
+	line-height: 1;
+}
+
+.TimerPanel-pills {
+	display: flex;
+	gap: 6px;
+}
+
+.TimerPanel-pill {
+	padding: 2px 10px;
+	font-size: 12px;
+	font-weight: 600;
+	background: #fff;
+	border: 1px solid #c9dcfb;
+	border-radius: 999px;
+}
+
+.TimerPanel-pill:hover {
+	background: #f8f9fa;
+}
+
+.TimerPanel-actions {
+	display: flex;
+	gap: 8px;
+}
+
+.TimerPanel-timesUp {
+	min-width: 180px;
+	font-size: 28px;
+	font-weight: 700;
+	color: #c92a2a;
 }
 
 /* Sticky pad next to the toolbar: ochre base, a pale sheet peeking out, curled top sheet */
@@ -179,7 +540,7 @@ body {
 .StickyStack-top {
 	top: 0;
 	bottom: 10px;
-	left: 2px !important;
+	left: 2px;
 	background: linear-gradient(170deg, #fdf29c, #fffbb6);
 	/* bottom edge lifts towards the right corner */
 	border-bottom-right-radius: 16px 9px;
@@ -249,15 +610,4 @@ body {
 .Home li span {
 	color: var(--muted);
 	white-space: nowrap;
-}
-
-@media (max-width: 640px) {
-	.YourName,
-	.RoomWrapper-home {
-		display: none;
-	}
-	.BoardName {
-		width: auto;
-		flex: 1;
-	}
 }
